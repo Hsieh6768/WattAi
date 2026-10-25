@@ -19,6 +19,7 @@ public class PuzzleBoard extends State {
     private final int size;
     private final int row;
     private final int col;
+    private int[] goalIndex;
 
     public PuzzleBoard(int[] board, int size, int row, int col) {
         /*this.board = new int[size][size];
@@ -98,23 +99,31 @@ public class PuzzleBoard extends State {
         return misplacedCount;
     }
 
+    private int[] getGoalIndex() {
+        if (goalIndex == null) {
+            int[] index = new int[size * size];
+
+            for (int i = 0; i < size * size; i++) {
+                index[board[i]] = i;
+            }
+
+            goalIndex = index;
+        }
+
+        return goalIndex;
+    }
+
     // 两个点之间的曼哈顿距离
     private int manhattan(PuzzleBoard goal) {
         int manhattanCount = 0;
+        int[] goalIndex = goal.getGoalIndex();
         for (int i = 0; i < size * size; i++) {
             if (board[i] == 0)
                 continue;
-            int row = i / size;
-            int col = i % size;
-            int goalRow = 0;
-            int goalCol = 0;
-            for (int j = 0; j < size * size; j++)
-                if (board[i] == goal.board[j]) {
-                    goalRow = j / size;
-                    goalCol = j % size;
-                    break;
-                }
-            manhattanCount += (Math.abs(row - goalRow) + Math.abs(col - goalCol));
+            int target = goalIndex[board[i]];
+            manhattanCount +=
+                    Math.abs(i / size - target / size) +
+                    Math.abs(i % size - target % size);
         }
         return manhattanCount;
     }
