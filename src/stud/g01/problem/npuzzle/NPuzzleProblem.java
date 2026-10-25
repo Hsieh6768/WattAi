@@ -38,22 +38,14 @@ public class NPuzzleProblem extends Problem {
 
     @Override
     public void showSolution(Deque<Node> path) {
+        System.out.println("step 0£∫≥ı º∆Â≈Ã");
+        System.out.println(initialState);
+
         int step = 1;
         for (Node node : path) {
-            System.out.print("\nstep ");
-            System.out.print(step++);
-            PuzzleBoard p = (PuzzleBoard) node.getParent().getState();
-            PuzzleMove move = (PuzzleMove) node.getAction();
-            PuzzleDirection d = move.getPuzzleDirection();
-            for (int i = 0; i < size; i++){
-                for (int j = 0; j < size; j++) {
-                    if (i == p.getRow() && j == p.getCol())
-                        System.out.print(d.symbol() + " ");
-                    else
-                        System.out.print(p.getBoard()[i * size + j] + " ");
-                }
-                System.out.println();
-            }
+            System.out.println();
+            System.out.println("step " + step++ + "£∫" + node.getAction());
+            System.out.println(node.getState());
         }
     }
 

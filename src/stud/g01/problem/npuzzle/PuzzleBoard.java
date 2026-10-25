@@ -83,9 +83,9 @@ public class PuzzleBoard extends State {
     // 不在位将牌数
     private int misplaced(PuzzleBoard goal) {
         int misplacedCount = 0;
-        int[] goalBoard = goal.getBoard();
+        int[] goalBoard = goal.board;
         for (int i = 0; i < size * size; i++) {
-            if (i == row * size + col)
+            if (board[i] == 0)
                 continue;
             if (board[i] != goalBoard[i])
                 misplacedCount++;
@@ -102,13 +102,20 @@ public class PuzzleBoard extends State {
     // 两个点之间的曼哈顿距离
     private int manhattan(PuzzleBoard goal) {
         int manhattanCount = 0;
+        int[] goalBoard = goal.board;
         for (int i = 0; i < size * size; i++) {
-            if (i == this.row * this.size + this.col)
+            if (board[i] == 0)
                 continue;
             int row = i / size;
             int col = i % size;
-            int targetRow = (board[i] - 1) / size;
-            int targetCol = (board[i] - 1) % size;
+            int targetRow = 0;
+            int targetCol = 0;
+            for (int j = 0; j < size * size; j++)
+                if (board[i] == goalBoard[j]) {
+                    targetRow = j / size;
+                    targetCol = j % size;
+                    break;
+                }
             manhattanCount += (Math.abs(row - targetRow) + Math.abs(col - targetCol));
         }
         return manhattanCount;
@@ -118,10 +125,10 @@ public class PuzzleBoard extends State {
     private int disjointPattern(PuzzleBoard goal) {
         int disjointCount = 0;
         for (int i = 0; i < size * size - 1; i++) {
-            if (i == row * size + col)
+            if (board[i] == 0)
                 continue;
             for (int j = i + 1; j < size * size; j++)
-                if (board[j] > board[i])
+                if (board[j] != 0 && board[i] > board[j])
                     disjointCount++;
         }
         return disjointCount;
@@ -207,6 +214,10 @@ public class PuzzleBoard extends State {
 
         PuzzleBoard up = (PuzzleBoard) parent.next(
                 new PuzzleMove(PuzzleDirection.UP));
+
+        Predictor predictor = PuzzleBoard.predictor(MANHATTAN);
+        int h = predictor.heuristics(up, down);
+        System.out.println(h);
 
         int[] expectedDown = {1, 2, 3, 4, 5, 6, 7, 0, 8};
 
