@@ -83,11 +83,10 @@ public class PuzzleBoard extends State {
     // 不在位将牌数
     private int misplaced(PuzzleBoard goal) {
         int misplacedCount = 0;
-        int[] goalBoard = goal.board;
         for (int i = 0; i < size * size; i++) {
             if (board[i] == 0)
                 continue;
-            if (board[i] != goalBoard[i])
+            if (board[i] != goal.board[i])
                 misplacedCount++;
         }
         /*
@@ -102,21 +101,20 @@ public class PuzzleBoard extends State {
     // 两个点之间的曼哈顿距离
     private int manhattan(PuzzleBoard goal) {
         int manhattanCount = 0;
-        int[] goalBoard = goal.board;
         for (int i = 0; i < size * size; i++) {
             if (board[i] == 0)
                 continue;
             int row = i / size;
             int col = i % size;
-            int targetRow = 0;
-            int targetCol = 0;
+            int goalRow = 0;
+            int goalCol = 0;
             for (int j = 0; j < size * size; j++)
-                if (board[i] == goalBoard[j]) {
-                    targetRow = j / size;
-                    targetCol = j % size;
+                if (board[i] == goal.board[j]) {
+                    goalRow = j / size;
+                    goalCol = j % size;
                     break;
                 }
-            manhattanCount += (Math.abs(row - targetRow) + Math.abs(col - targetCol));
+            manhattanCount += (Math.abs(row - goalRow) + Math.abs(col - goalCol));
         }
         return manhattanCount;
     }
