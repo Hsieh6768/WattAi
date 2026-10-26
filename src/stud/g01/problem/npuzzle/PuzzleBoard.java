@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.List;
 
 import static core.solver.algorithm.heuristic.HeuristicType.*;
 
@@ -22,14 +23,30 @@ public class PuzzleBoard extends State {
     private int[] goalIndex;
 
     public PuzzleBoard(int[] board, int size, int row, int col) {
-        /*this.board = new int[size][size];
+        this(board, size, row, col, false);
+    }
+
+    private PuzzleBoard(
+            int[] board,
+            int size,
+            int row,
+            int col,
+            boolean takeOwnership) {
+
+        this.board = takeOwnership ? board : board.clone();
+        this.size = size;
+        this.row = row;
+        this.col = col;
+    }/*
+    public PuzzleBoard(int[] board, int size, int row, int col) {
+        *//*this.board = new int[size][size];
         for (int i = 0; i < size; i++)
-            this.board[i] = board[i].clone();*/
+            this.board[i] = board[i].clone();*//*
         this.board = board.clone();
         this.size = size;
         this.row = row;
         this.col = col;
-    }
+    }*/
 
     @Override
     public void draw() {
@@ -52,12 +69,23 @@ public class PuzzleBoard extends State {
         int[] board = getBoard();
         int col = getCol() + offsets[0];
         int row = getRow() + offsets[1];
-        int temp = board[row * size + col];
-        board[row * size + col] = board[getRow() * size + getCol()];
-        board[getRow() * size + getCol()] = temp;
-        return new PuzzleBoard(board, size, row, col);
+        board[getRow() * size + getCol()] = board[row * size + col];
+        board[row * size + col] = 0;
+        return new PuzzleBoard(board, size, row, col, true);
     }
 
+    private static final List<PuzzleMove> MOVES = List.of(
+            new PuzzleMove(PuzzleDirection.UP),
+            new PuzzleMove(PuzzleDirection.RIGHT),
+            new PuzzleMove(PuzzleDirection.DOWN),
+            new PuzzleMove(PuzzleDirection.LEFT)
+    );
+
+    @Override
+    public Iterable<? extends Action> actions() {
+        return MOVES;
+    }
+    /*
     @Override
     public Iterable<? extends Action> actions() {
         Collection<PuzzleMove> moves = new ArrayList<>();
@@ -65,6 +93,7 @@ public class PuzzleBoard extends State {
             moves.add(new PuzzleMove(d));
         return moves;
     }
+    */
 
     //枚举映射，存放不同类型的启发函数
     private static final EnumMap<HeuristicType, Predictor> predictors = new EnumMap<>(HeuristicType.class);
