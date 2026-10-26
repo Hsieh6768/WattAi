@@ -128,17 +128,9 @@ public class PuzzleBoard extends State {
         return manhattanCount;
     }
 
-    // 两个点之间的逆序对数
+    //
     private int disjointPattern(PuzzleBoard goal) {
-        int disjointCount = 0;
-        for (int i = 0; i < size * size - 1; i++) {
-            if (board[i] == 0)
-                continue;
-            for (int j = i + 1; j < size * size; j++)
-                if (board[j] != 0 && board[i] > board[j])
-                    disjointCount++;
-        }
-        return disjointCount;
+        return DisjointPatternDatabase.forGoal(goal).estimate(this.board);
     }
 
     @Override
