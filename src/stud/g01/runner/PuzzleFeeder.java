@@ -10,7 +10,7 @@ import core.solver.queue.Node;
 
 import stud.g01.problem.npuzzle.NPuzzleProblem;
 import stud.g01.problem.npuzzle.PuzzleBoard;
-import stud.queue.ListFrontier;
+import stud.g01.queue.PqFrontier;
 
 import java.util.ArrayList;
 //Fix Me   //Fix Me
@@ -66,7 +66,7 @@ public class PuzzleFeeder extends EngineFeeder {
 
     @Override
     public Frontier getFrontier(EvaluationType type) {
-        return new ListFrontier(Node.evaluator(type));
+        return new PqFrontier(Node.evaluator(type));
     }
 
     @Override
