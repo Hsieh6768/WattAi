@@ -210,6 +210,7 @@ public class PuzzleBoard extends State {
         return col;
     }
 
+    // test
     public static void main(String[] args) {
         int[] initial = {1, 2, 3, 4, 0, 6, 7, 5, 8};
 
