@@ -6,8 +6,6 @@ import core.solver.algorithm.heuristic.HeuristicType;
 import core.solver.algorithm.heuristic.Predictor;
 
 import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 
@@ -65,14 +63,28 @@ public class PuzzleBoard extends State {
         int[] offsets = PuzzleDirection.offset(dir);
 
         int size = getSize();
-        // int[][] board = getBoard();
         int[] board = getBoard();
         int col = getCol() + offsets[0];
         int row = getRow() + offsets[1];
         board[getRow() * size + getCol()] = board[row * size + col];
         board[row * size + col] = 0;
         return new PuzzleBoard(board, size, row, col, true);
-    }
+    }/*
+    @Override
+    public State next(Action action) {
+        PuzzleDirection dir = ((PuzzleMove)action).getPuzzleDirection();
+        int[] offsets = PuzzleDirection.offset(dir);
+
+        int size = getSize();
+        // int[][] board = getBoard();
+        int[] board = getBoard();
+        int col = getCol() + offsets[0];
+        int row = getRow() + offsets[1];
+        int temp = board[row * size + col];
+        board[row * size + col] = board[getRow() * size + getCol()];
+        board[getRow() * size + getCol()] = temp;
+        return new PuzzleBoard(board, size, row, col);
+    }*/
 
     private static final List<PuzzleMove> MOVES = List.of(
             new PuzzleMove(PuzzleDirection.UP),
