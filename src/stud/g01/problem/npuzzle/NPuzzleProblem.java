@@ -5,7 +5,9 @@ import core.problem.Problem;
 import core.problem.State;
 import core.solver.queue.Node;
 
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 
 public class NPuzzleProblem extends Problem {
     public NPuzzleProblem(State initialState, State goal) {
@@ -14,6 +16,19 @@ public class NPuzzleProblem extends Problem {
 
     public NPuzzleProblem(State initialState, State goal, int size) {
         super(initialState, goal, size);
+    }
+
+    /** Generates the same legal children, using the actual goal for Manhattan deltas. */
+    public List<Node> childNodesWithIncrementalManhattan(Node parent) {
+        List<Node> children = new ArrayList<>();
+        PuzzleBoard parentBoard = (PuzzleBoard) parent.getState();
+        PuzzleBoard goalBoard = (PuzzleBoard) goal;
+        for (Node child : childNodes(parent)) {
+            PuzzleBoard childBoard = (PuzzleBoard) child.getState();
+            children.add(child.setHeuristic(childBoard.manhattanFromParent(
+                    parentBoard, goalBoard, parent.getHeuristic())));
+        }
+        return children;
     }
 
     @Override

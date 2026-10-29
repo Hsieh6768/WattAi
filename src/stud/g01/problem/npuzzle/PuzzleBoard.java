@@ -169,6 +169,21 @@ public class PuzzleBoard extends State {
         return manhattanCount;
     }
 
+    /** Computes this legal single-move child's Manhattan value from its parent. */
+    public int manhattanFromParent(PuzzleBoard parent, PuzzleBoard goal,
+                                   int parentHeuristic) {
+        // The child blank was the moved tile's position in the parent.
+        int newPosition = parent.row * size + parent.col;
+        int tile = board[newPosition];
+        int target = goal.getGoalIndex()[tile];
+        int targetRow = target / size;
+        int targetCol = target % size;
+        int oldDistance = Math.abs(row - targetRow) + Math.abs(col - targetCol);
+        int newDistance = Math.abs(parent.row - targetRow)
+                + Math.abs(parent.col - targetCol);
+        return parentHeuristic - oldDistance + newDistance;
+    }
+
     //
     private int disjointPattern(PuzzleBoard goal) {
         return DisjointPatternDatabase.forGoal(goal).estimate(this.board);

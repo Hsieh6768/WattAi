@@ -3,6 +3,9 @@ package stud.g01.solver;
 import core.problem.Problem;
 import core.problem.State;
 import core.solver.algorithm.heuristic.Predictor;
+import core.solver.algorithm.heuristic.HeuristicType;
+import stud.g01.problem.npuzzle.NPuzzleProblem;
+import stud.g01.problem.npuzzle.PuzzleBoard;
 import core.solver.algorithm.searcher.AbstractSearcher;
 import core.solver.queue.Frontier;
 import core.solver.queue.Node;
@@ -16,6 +19,7 @@ public class IdAStar extends AbstractSearcher {
 
     private final Predictor predictor; //预测器，对当前状态进行启发式估值
     private int nextBound;
+    private boolean incrementalManhattan;
 
     /*
     public IdAStar(Frontier frontier) {
@@ -40,6 +44,9 @@ public class IdAStar extends AbstractSearcher {
             return null;
         }
 
+        // Custom predictors and other problems retain their original evaluation path.
+        incrementalManhattan = problem instanceof NPuzzleProblem
+                && predictor == PuzzleBoard.predictor(HeuristicType.MANHATTAN);
         Node root = problem.root(predictor);
         int bound = root.evaluation();
         Set<State> onPath = new HashSet<>();
@@ -71,7 +78,9 @@ public class IdAStar extends AbstractSearcher {
         nodesExpanded++;
         // childNodes eagerly constructs *all* legal successors; count them all,
         // including children not visited because a solution was found early.
-        java.util.List<Node> children = problem.childNodes(node, predictor);
+        java.util.List<Node> children = incrementalManhattan
+                ? ((NPuzzleProblem) problem).childNodesWithIncrementalManhattan(node)
+                : problem.childNodes(node, predictor);
         nodesGenerated += children.size();
         for (Node child : children) {
             State childState = child.getState();
