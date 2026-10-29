@@ -146,9 +146,15 @@ public class NPuzzleProblem extends Problem {
         final int warmup = 20_000;
         final int iterations = 200_000;
 
-        // 预热 JIT，且计时循环中不包含棋盘构造或控制台输出。
+        // 预热 JIT；保留计数，避免预热调用被编译器当作无用代码。
+        int warmupSolvableCount = 0;
         for (int i = 0; i < warmup; i++) {
-            (i % 2 == 0 ? possible : impossible).solvable();
+            if ((i % 2 == 0 ? possible : impossible).solvable()) {
+                warmupSolvableCount++;
+            }
+        }
+        if (warmupSolvableCount != warmup / 2) {
+            throw new AssertionError(label + " 的预热校验异常");
         }
 
         long start = System.nanoTime();
