@@ -24,18 +24,18 @@ public abstract class AbstractSearcher {
     // 还未扩展的节点队列
     protected final Frontier frontier;
 
-    protected int nodesGenerated = 0;   //已生成的节点的个数
-    protected int nodesExpanded = 0;    //已扩展的节点的个数
+    protected long nodesGenerated = 0;   //已生成的节点的个数
+    protected long nodesExpanded = 0;    //已扩展的节点的个数
 
     public AbstractSearcher(Frontier frontier) {
         this.frontier = frontier;
     }
 
-    public int nodesGenerated() {
+    public long nodesGenerated() {
         return nodesGenerated;
     }
 
-    public int nodesExpanded() {
+    public long nodesExpanded() {
         return nodesExpanded;
     }
 
