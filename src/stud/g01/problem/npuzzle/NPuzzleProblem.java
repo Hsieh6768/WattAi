@@ -94,43 +94,4 @@ public class NPuzzleProblem extends Problem {
             System.out.println(node.getState());
         }
     }
-
-    // test
-    public static void main(String[] args) {
-        int[] initialData = {1, 2, 3, 4, 0, 6, 7, 5, 8};
-        int[] goalData = {1, 2, 3, 4, 5, 6, 7, 8, 0};
-
-        PuzzleBoard initial =
-                new PuzzleBoard(initialData, 3, 1, 1);
-        PuzzleBoard goal =
-                new PuzzleBoard(goalData, 3, 2, 2);
-
-        NPuzzleProblem problem = new NPuzzleProblem(initial, goal, 3);
-
-        Node root = problem.root();
-        var children = problem.childNodes(root);
-
-        System.out.println("孩子数量为4：" + (children.size() == 4));
-
-        for (Node child : children) {
-            PuzzleBoard childBoard = (PuzzleBoard) child.getState();
-            int blankIndex = childBoard.getRow() * childBoard.getSize()
-                    + childBoard.getCol();
-
-            System.out.println("空格坐标确实指向0："
-                    + (childBoard.getBoard()[blankIndex] == 0));
-
-            System.out.println("动作：" + child.getAction());
-            System.out.println(childBoard);
-            System.out.println("g为1：" + (child.getPathCost() == 1));
-            System.out.println("父节点正确：" + (child.getParent() == root));
-            System.out.println("空格坐标："
-                    + childBoard.getRow() + "," + childBoard.getCol());
-            System.out.println();
-        }
-
-        System.out.println("原棋盘未改变："
-                + java.util.Arrays.equals(
-                initial.getBoard(), initialData));
-    }
 }
