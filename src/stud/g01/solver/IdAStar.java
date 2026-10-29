@@ -21,6 +21,20 @@ public class IdAStar extends AbstractSearcher {
     private int nextBound;
     private boolean incrementalManhattan;
 
+    private enum Direction { FORWARD, BACKWARD }
+
+    private static Direction configuredDirection() {
+        String value = System.getProperty("npuzzle.ida.direction", "forward");
+        if ("forward".equalsIgnoreCase(value)) {
+            return Direction.FORWARD;
+        }
+        if ("reverse".equalsIgnoreCase(value)) {
+            return Direction.BACKWARD;
+        }
+        throw new IllegalArgumentException(
+                "npuzzle.ida.direction must be forward or reverse: " + value);
+    }
+
     /*
     public IdAStar(Frontier frontier) {
         super(frontier);
@@ -40,23 +54,33 @@ public class IdAStar extends AbstractSearcher {
         nodesGenerated = 0;
         nodesExpanded = 0;
 
+        Direction direction = configuredDirection();
+        // Validate before solvability/root evaluation: unsupported reverse requests
+        // must fail explicitly, even for solved or unsolvable inputs.
+        incrementalManhattan = problem instanceof NPuzzleProblem
+                && predictor == PuzzleBoard.predictor(HeuristicType.MANHATTAN);
+        if (direction == Direction.BACKWARD && !incrementalManhattan) {
+            throw new IllegalArgumentException(
+                    "Reverse IDA* requires NPuzzleProblem + MANHATTAN");
+        }
         if (!problem.solvable()) {
             return null;
         }
 
-        // Custom predictors and other problems retain their original evaluation path.
-        incrementalManhattan = problem instanceof NPuzzleProblem
-                && predictor == PuzzleBoard.predictor(HeuristicType.MANHATTAN);
-        Node root = problem.root(predictor);
+        Problem searchProblem = direction == Direction.BACKWARD
+                ? ((NPuzzleProblem) problem).reversed() : problem;
+        Node root = searchProblem.root(predictor);
         int bound = root.evaluation();
         Set<State> onPath = new HashSet<>();
         onPath.add(root.getState());
 
         while (true) {
             nextBound = Integer.MAX_VALUE;
-            Node solution = depthFirst(problem, root, bound, onPath);
+            Node solution = depthFirst(searchProblem, root, bound, onPath);
             if (solution != null) {
-                return generatePath(solution);
+                return direction == Direction.BACKWARD
+                        ? ((NPuzzleProblem) problem).restoreForwardPath(solution)
+                        : generatePath(solution);
             }
             if (nextBound == Integer.MAX_VALUE) {
                 return null; // No successors beyond the current bound.

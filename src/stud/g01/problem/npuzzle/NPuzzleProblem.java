@@ -4,7 +4,10 @@ import core.problem.Action;
 import core.problem.Problem;
 import core.problem.State;
 import core.solver.queue.Node;
+import core.solver.algorithm.heuristic.HeuristicType;
+import core.solver.algorithm.heuristic.Predictor;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
@@ -16,6 +19,39 @@ public class NPuzzleProblem extends Problem {
 
     public NPuzzleProblem(State initialState, State goal, int size) {
         super(initialState, goal, size);
+    }
+
+    /** A separate search problem; the original endpoints are never reassigned. */
+    public NPuzzleProblem reversed() {
+        return new NPuzzleProblem(goal, initialState, size);
+    }
+
+    /**
+     * Replays the reversed/inverted G-to-S actions from the original S.
+     * Like AbstractSearcher.generatePath, the deque excludes the root node.
+     * All returned costs and Manhattan estimates refer to the original problem.
+     */
+    public Deque<Node> restoreForwardPath(Node reverseSolution) {
+        Predictor manhattan = PuzzleBoard.predictor(HeuristicType.MANHATTAN);
+        Deque<Node> path = new ArrayDeque<>();
+        Node parent = root(manhattan);
+        for (Node reverse = reverseSolution; reverse.getParent() != null;
+             reverse = reverse.getParent()) {
+            PuzzleDirection direction = ((PuzzleMove) reverse.getAction()).getPuzzleDirection();
+            PuzzleMove action = new PuzzleMove(switch (direction) {
+                case UP -> PuzzleDirection.DOWN;
+                case RIGHT -> PuzzleDirection.LEFT;
+                case DOWN -> PuzzleDirection.UP;
+                case LEFT -> PuzzleDirection.RIGHT;
+            });
+            State state = parent.getState().next(action);
+            int pathCost = parent.getPathCost() + stepCost(state, action);
+            Node child = new Node(state, parent, action, pathCost,
+                    manhattan.heuristics(state, goal));
+            path.addLast(child);
+            parent = child;
+        }
+        return path;
     }
 
     /** IDA* Manhattan children, excluding the immediate return to the parent state. */
