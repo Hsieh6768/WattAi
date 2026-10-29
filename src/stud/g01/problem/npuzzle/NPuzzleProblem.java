@@ -18,15 +18,38 @@ public class NPuzzleProblem extends Problem {
         super(initialState, goal, size);
     }
 
-    /** Generates the same legal children, using the actual goal for Manhattan deltas. */
+    /** IDA* Manhattan children, excluding the immediate return to the parent state. */
     public List<Node> childNodesWithIncrementalManhattan(Node parent) {
         List<Node> children = new ArrayList<>();
         PuzzleBoard parentBoard = (PuzzleBoard) parent.getState();
         PuzzleBoard goalBoard = (PuzzleBoard) goal;
-        for (Node child : childNodes(parent)) {
+        for (Node child : childNodesWithoutImmediateReverse(parent)) {
             PuzzleBoard childBoard = (PuzzleBoard) child.getState();
             children.add(child.setHeuristic(childBoard.manhattanFromParent(
                     parentBoard, goalBoard, parent.getHeuristic())));
+        }
+        return children;
+    }
+
+    private List<Node> childNodesWithoutImmediateReverse(Node parent) {
+        if (parent.getParent() == null) {
+            return childNodes(parent); // The root keeps every legal move.
+        }
+        List<Node> children = new ArrayList<>();
+        PuzzleBoard board = (PuzzleBoard) parent.getState();
+        PuzzleBoard previous = (PuzzleBoard) parent.getParent().getState();
+        for (Action action : board.actions()) {
+            if (!applicable(board, action)) {
+                continue;
+            }
+            int[] offsets = PuzzleDirection.offset(((PuzzleMove) action).getPuzzleDirection());
+            if (board.getRow() + offsets[1] == previous.getRow()
+                    && board.getCol() + offsets[0] == previous.getCol()) {
+                continue; // Prune before next() copies the board or a Node is created.
+            }
+            State state = board.next(action);
+            int pathCost = parent.getPathCost() + stepCost(state, action);
+            children.add(new Node(state, parent, action, pathCost));
         }
         return children;
     }
