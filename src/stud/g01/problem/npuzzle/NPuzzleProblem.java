@@ -117,5 +117,56 @@ public class NPuzzleProblem extends Problem {
         System.out.println("原棋盘未改变："
                 + java.util.Arrays.equals(
                 initial.getBoard(), initialData));
+
+        // 判断可解性所需时间：预热后重复调用，避免单次计时误差。
+        System.out.println("\n=== 可解性判定耗时测试 ===");
+        NPuzzleProblem impossible3 = new NPuzzleProblem(
+                new PuzzleBoard(new int[]{1, 2, 3, 4, 5, 6, 8, 7, 0}, 3, 2, 2),
+                goal, 3);
+        benchmarkSolvable("8-Puzzle (3x3)", problem, impossible3);
+
+        PuzzleBoard goal4 = new PuzzleBoard(
+                new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0},
+                4, 3, 3);
+        NPuzzleProblem possible4 = new NPuzzleProblem(
+                new PuzzleBoard(
+                        new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 13, 14, 15, 12},
+                        4, 2, 3),
+                goal4, 4);
+        NPuzzleProblem impossible4 = new NPuzzleProblem(
+                new PuzzleBoard(
+                        new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 14, 0},
+                        4, 3, 3),
+                goal4, 4);
+        benchmarkSolvable("15-Puzzle (4x4)", possible4, impossible4);
+    }
+
+    private static void benchmarkSolvable(
+            String label, NPuzzleProblem possible, NPuzzleProblem impossible) {
+        final int warmup = 20_000;
+        final int iterations = 200_000;
+
+        // 预热 JIT，且计时循环中不包含棋盘构造或控制台输出。
+        for (int i = 0; i < warmup; i++) {
+            (i % 2 == 0 ? possible : impossible).solvable();
+        }
+
+        long start = System.nanoTime();
+        int solvableCount = 0;
+        for (int i = 0; i < iterations; i++) {
+            if ((i % 2 == 0 ? possible : impossible).solvable()) {
+                solvableCount++;
+            }
+        }
+        long elapsed = System.nanoTime() - start;
+
+        if (solvableCount != iterations / 2) {
+            throw new AssertionError(label + " 的可解性判断结果异常");
+        }
+        System.out.printf(java.util.Locale.ROOT,
+                "%s: %d 次，总耗时 %.3f ms，平均 %.1f ns/次 (%.4f us/次)%n",
+                label, iterations, elapsed / 1_000_000.0,
+                elapsed / (double) iterations,
+                elapsed / (iterations * 1_000.0));
     }
 }
