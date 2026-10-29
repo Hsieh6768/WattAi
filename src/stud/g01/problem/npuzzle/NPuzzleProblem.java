@@ -18,16 +18,47 @@ public class NPuzzleProblem extends Problem {
 
     @Override
     public boolean solvable() {
-        return true;
+        return solvabilityParity((PuzzleBoard) initialState)
+                == solvabilityParity((PuzzleBoard) goal);
     }
 
-    // ���۶��� 1
+    // 可解性由棋盘排列的不变量决定，需分别计算初始状态和目标状态。
+    private static int solvabilityParity(PuzzleBoard state) {
+        int[] board = state.getBoard();
+        int width = state.getSize();
+        int inversions = 0;
+        int blankRow = 0;
+
+        // 按行展开，忽略空格 0，计算逆序对数量。
+        for (int i = 0; i < board.length; i++) {
+            if (board[i] == 0) {
+                blankRow = i / width;
+                continue;
+            }
+            for (int j = i + 1; j < board.length; j++) {
+                if (board[j] != 0 && board[i] > board[j]) {
+                    inversions++;
+                }
+            }
+        }
+
+        // 奇数边长（例如 3x3）：逆序数的奇偶性保持不变。
+        if (width % 2 == 1) {
+            return inversions % 2;
+        }
+
+        // 偶数边长（例如 4x4）：再考虑空格距最底行的距离（从 0 计）。
+        int distanceFromBottom = width - 1 - blankRow;
+        return (inversions + distanceFromBottom) % 2;
+    }
+
+    // 代价都是 1
     @Override
     public int stepCost(State state, Action action) {
         return action.stepCost();
     }
 
-    // ���ո����������Ƿ�Խ��
+    // 检查空格所在索引是否越界
     @Override
     public boolean applicable(State state, Action action) {
         int[] offsets = PuzzleDirection.offset(((PuzzleMove)action).getPuzzleDirection());
@@ -38,13 +69,13 @@ public class NPuzzleProblem extends Problem {
 
     @Override
     public void showSolution(Deque<Node> path) {
-        System.out.println("step 0����ʼ����");
+        System.out.println("step 0：初始棋盘");
         System.out.println(initialState);
 
         int step = 1;
         for (Node node : path) {
             System.out.println();
-            System.out.println("step " + step++ + "��" + node.getAction());
+            System.out.println("step " + step++ + "：" + node.getAction());
             System.out.println(node.getState());
         }
     }
@@ -64,26 +95,26 @@ public class NPuzzleProblem extends Problem {
         Node root = problem.root();
         var children = problem.childNodes(root);
 
-        System.out.println("��������Ϊ4��" + (children.size() == 4));
+        System.out.println("孩子数量为4：" + (children.size() == 4));
 
         for (Node child : children) {
             PuzzleBoard childBoard = (PuzzleBoard) child.getState();
             int blankIndex = childBoard.getRow() * childBoard.getSize()
                     + childBoard.getCol();
 
-            System.out.println("�ո�����ȷʵָ��0��"
+            System.out.println("空格坐标确实指向0："
                     + (childBoard.getBoard()[blankIndex] == 0));
 
-            System.out.println("������" + child.getAction());
+            System.out.println("动作：" + child.getAction());
             System.out.println(childBoard);
-            System.out.println("gΪ1��" + (child.getPathCost() == 1));
-            System.out.println("���ڵ���ȷ��" + (child.getParent() == root));
-            System.out.println("�ո����꣺"
+            System.out.println("g为1：" + (child.getPathCost() == 1));
+            System.out.println("父节点正确：" + (child.getParent() == root));
+            System.out.println("空格坐标："
                     + childBoard.getRow() + "," + childBoard.getCol());
             System.out.println();
         }
 
-        System.out.println("ԭ����δ�ı䣺"
+        System.out.println("原棋盘未改变："
                 + java.util.Arrays.equals(
                 initial.getBoard(), initialData));
     }
