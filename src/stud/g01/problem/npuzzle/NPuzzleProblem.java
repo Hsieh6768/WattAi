@@ -18,7 +18,38 @@ public class NPuzzleProblem extends Problem {
 
     @Override
     public boolean solvable() {
-        return true;
+        return solvabilityParity((PuzzleBoard) initialState)
+                == solvabilityParity((PuzzleBoard) goal);
+    }
+
+    // 可解性由棋盘排列的不变量决定，需分别计算初始状态和目标状态。
+    private static int solvabilityParity(PuzzleBoard state) {
+        int[] board = state.getBoard();
+        int width = state.getSize();
+        int inversions = 0;
+        int blankRow = 0;
+
+        // 计算逆序数，忽略空格 0
+        for (int i = 0; i < board.length; i++) {
+            if (board[i] == 0) {
+                blankRow = i / width;
+                continue;
+            }
+            for (int j = i + 1; j < board.length; j++) {
+                if (board[j] != 0 && board[i] > board[j]) {
+                    inversions++;
+                }
+            }
+        }
+
+        // 奇数宽度：只看逆序数
+        if (width % 2 == 1) {
+            return inversions % 2;
+        }
+
+        // 偶数宽度：逆序数 + 空格距底行距离
+        int distanceFromBottom = width - 1 - blankRow;
+        return (inversions + distanceFromBottom) % 2;
     }
 
     // 代价都是 1
