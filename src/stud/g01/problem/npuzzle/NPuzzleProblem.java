@@ -11,6 +11,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.function.ToIntFunction;
 
 public class NPuzzleProblem extends Problem {
     public NPuzzleProblem(State initialState, State goal) {
@@ -52,6 +53,12 @@ public class NPuzzleProblem extends Problem {
             parent = child;
         }
         return path;
+    }
+
+    /** Bind the real goal once; queries read the caller's board without copying it. */
+    public ToIntFunction<int[]> disjointPatternEstimator() {
+        DisjointPatternDatabase database = DisjointPatternDatabase.forGoal((PuzzleBoard) goal);
+        return database::estimate;
     }
 
     /** IDA* Manhattan children, excluding the immediate return to the parent state. */

@@ -17,6 +17,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.ToIntFunction;
 
 public class IdAStar extends AbstractSearcher {
 
@@ -75,7 +76,10 @@ public class IdAStar extends AbstractSearcher {
         Node root = searchProblem.root(predictor);
         // Preserve overridden Problem/State behavior and larger boards via the
         // existing object kernel; four-bit encoding is exact for <=16 cells.
-        if (incrementalManhattan && searchProblem.getClass() == NPuzzleProblem.class
+        boolean disjointPattern = problem instanceof NPuzzleProblem
+                && predictor == PuzzleBoard.predictor(HeuristicType.DISJOINT_PATTERN);
+        if ((incrementalManhattan || disjointPattern)
+                && searchProblem.getClass() == NPuzzleProblem.class
                 && root.getState().getClass() == PuzzleBoard.class) {
             PuzzleBoard goal = (PuzzleBoard) ((NPuzzleProblem) searchProblem)
                     .reversed().root().getState();
@@ -83,7 +87,7 @@ public class IdAStar extends AbstractSearcher {
             if (goal.getClass() == PuzzleBoard.class
                     && initial.getSize() == goal.getSize()
                     && initial.getSize() >= 2 && initial.getSize() <= 4) {
-                Node solution = new ManhattanDfs((NPuzzleProblem) searchProblem, root).search();
+                Node solution = new InPlaceDfs((NPuzzleProblem) searchProblem, root).search();
                 if (solution == null) {
                     return null;
                 }
@@ -146,11 +150,13 @@ public class IdAStar extends AbstractSearcher {
     }
 
     /** Mutable workspace owned by one search call, never used as a State/hash key. */
-    private final class ManhattanDfs {
+    private final class InPlaceDfs {
         private final NPuzzleProblem problem;
         private final Node root;
         private final int width;
         private final int[] board;
+        private final ToIntFunction<int[]> pdbEstimate;
+        private int[] pdbPathHeuristics; // Only PDB needs stored h for no-copy path rebuilding.
         private final int[] goalIndex;
         private final PuzzleBoard goalBoard;
         private final long goalKey;
@@ -159,12 +165,15 @@ public class IdAStar extends AbstractSearcher {
         private int[] moves = new int[64];
         private int solutionDepth;
 
-        private ManhattanDfs(NPuzzleProblem problem, Node root) {
+        private InPlaceDfs(NPuzzleProblem problem, Node root) {
             this.problem = problem;
             this.root = root;
             PuzzleBoard initial = (PuzzleBoard) root.getState();
             width = initial.getSize();
             board = initial.getBoard(); // Independent copy; original states stay immutable.
+            pdbEstimate = predictor == PuzzleBoard.predictor(HeuristicType.DISJOINT_PATTERN)
+                    ? problem.disjointPatternEstimator() : null;
+            pdbPathHeuristics = pdbEstimate != null ? new int[moves.length] : null;
             initialBlank = initial.getRow() * width + initial.getCol();
             goalBoard = (PuzzleBoard) problem.reversed().root().getState();
             int[] goal = goalBoard.getBoard();
@@ -231,15 +240,22 @@ public class IdAStar extends AbstractSearcher {
                 if (onPath(childKey, g)) {
                     continue;
                 }
-                int target = goalIndex[tile];
-                int childH = h - Math.abs(next / width - target / width)
-                        - Math.abs(next % width - target % width)
-                        + Math.abs(row - target / width) + Math.abs(col - target % width);
                 moves[g] = direction;
                 pathKeys[g + 1] = childKey;
                 board[blank] = tile;
                 board[next] = 0;
                 try {
+                    // Only h changes: PDB reads the moved workspace, Manhattan stays incremental.
+                    int childH;
+                    if (pdbEstimate != null) {
+                        childH = pdbEstimate.applyAsInt(board);
+                        pdbPathHeuristics[g] = childH;
+                    } else {
+                        int target = goalIndex[tile];
+                        childH = h - Math.abs(next / width - target / width)
+                                - Math.abs(next % width - target % width)
+                                + Math.abs(row - target / width) + Math.abs(col - target % width);
+                    }
                     if (depthFirst(next, g + 1, childH, blank, childKey, bound)) {
                         return true;
                     }
@@ -266,6 +282,9 @@ public class IdAStar extends AbstractSearcher {
                 int capacity = Math.max(required, pathKeys.length * 2);
                 pathKeys = Arrays.copyOf(pathKeys, capacity);
                 moves = Arrays.copyOf(moves, capacity);
+                if (pdbPathHeuristics != null) {
+                    pdbPathHeuristics = Arrays.copyOf(pdbPathHeuristics, capacity);
+                }
             }
         }
 
@@ -277,10 +296,12 @@ public class IdAStar extends AbstractSearcher {
                 State state = parent.getState().next(action);
                 parent = new Node(state, parent, action,
                         parent.getPathCost() + problem.stepCost(state, action),
-                        ((PuzzleBoard) state).manhattanFromParent(
-                                (PuzzleBoard) parent.getState(),
-                                goalBoard,
-                                parent.getHeuristic()));
+                        pdbEstimate != null
+                                ? pdbPathHeuristics[i]
+                                : ((PuzzleBoard) state).manhattanFromParent(
+                                        (PuzzleBoard) parent.getState(),
+                                        goalBoard,
+                                        parent.getHeuristic()));
             }
             return parent;
         }
