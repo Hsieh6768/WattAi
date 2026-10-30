@@ -14,13 +14,14 @@ import java.util.Arrays;
  *
  * Each abstract state records the blank and the positions of the tiles in one group.
  * Moving an in-group tile costs 1; moving any other tile costs 0.
- * Reverse 0-1 BFS therefore produces additive, consistent heuristics.
+ * Reverse 0-1 BFS produces additive admissible heuristics. Legacy tables retain
+ * the blank; 663 takes a minimum over blank positions after the complete search.
  *
  * 8-puzzle:  4 + 4 groups.
- * 15-puzzle: 5 + 5 + 5 groups.
+ * 15-puzzle: default 5 + 5 + 5; opt-in 6 + 6 + 3 uses folded v2 tables.
  *
- * The lower 4 bits of each abstract key store the blank position;
- * successive 4-bit nibbles store the group's tile positions.
+ * In legacy tables and during 663 generation, the lower 4 bits store the blank;
+ * successive nibbles store ordered tile positions. Final 663 tables omit the blank.
  */
 final class DisjointPatternDatabase {
     private static final int MAGIC = 0x57415044; // WAPD
@@ -32,29 +33,38 @@ final class DisjointPatternDatabase {
     private static volatile ActiveCache activeCache;
 
     private final int size;
+    private final String partition;
     private final int[] goalTiles;
     private final Pattern[] patterns;
     private final int[] groupOfTile;
     private final int[] shiftOfTile;
 
     static DisjointPatternDatabase forGoal(PuzzleBoard goal) {
+        String partition = System.getProperty("npuzzle.pdb.partition", "555");
+        if (!"555".equals(partition) && !"663".equals(partition)) {
+            throw new IllegalArgumentException("npuzzle.pdb.partition must be 555 or 663: " + partition);
+        }
+        if ("663".equals(partition) && goal.getSize() != 4) {
+            throw new IllegalArgumentException("npuzzle.pdb.partition=663 requires a 4x4 board");
+        }
         ActiveCache current = activeCache;
-        if (current != null && current.goal == goal) {
+        if (current != null && current.goal == goal && current.db.partition.equals(partition)) {
             return current.db;
         }
         synchronized (DisjointPatternDatabase.class) {
             current = activeCache;
-            if (current != null && current.goal == goal) {
+            if (current != null && current.goal == goal && current.db.partition.equals(partition)) {
                 return current.db;
             }
             int[] tiles = goal.getBoard(); // defensive copy, only on goal switch
             DisjointPatternDatabase db;
             if (current != null
+                    && current.db.partition.equals(partition)
                     && current.db.size == goal.getSize()
                     && Arrays.equals(current.db.goalTiles, tiles)) {
                 db = current.db;
             } else {
-                db = new DisjointPatternDatabase(goal.getSize(), tiles);
+                db = new DisjointPatternDatabase(goal.getSize(), tiles, partition);
             }
             activeCache = new ActiveCache(goal, db); // atomic publication
             return db;
@@ -70,14 +80,15 @@ final class DisjointPatternDatabase {
         }
     }
 
-    private DisjointPatternDatabase(int size, int[] goalTiles) {
+    private DisjointPatternDatabase(int size, int[] goalTiles, String partition) {
         if (size != 3 && size != 4) {
             throw new IllegalArgumentException("PDB currently supports only 3x3 and 4x4 boards");
         }
         this.size = size;
+        this.partition = partition;
         this.goalTiles = goalTiles.clone();
         validateGoal(this.goalTiles, size * size);
-        int[][] groups = (size == 3)
+        int[][] groups = "663".equals(partition) ? PatternDatabase663.groups() : (size == 3)
                 ? new int[][]{{1, 2, 3, 4}, {5, 6, 7, 8}}
                 : new int[][]{{1, 2, 3, 4, 5}, {6, 7, 8, 9, 10}, {11, 12, 13, 14, 15}};
         this.patterns = new Pattern[groups.length];
@@ -88,12 +99,15 @@ final class DisjointPatternDatabase {
             for (int j = 0; j < groups[p].length; j++) {
                 int tile = groups[p][j];
                 groupOfTile[tile] = p;
-                shiftOfTile[tile] = (j + 1) * 4;
+                shiftOfTile[tile] = (j + ("663".equals(partition) ? 0 : 1)) * 4;
             }
         }
 
         Path path = CACHE_DIR.resolve(cacheName());
-        byte[][] stored = readCache(path, groups);
+        // Unlike the legacy tables, 663 is NEVER generated as a side effect of a query.
+        byte[][] stored = "663".equals(partition)
+                ? PatternDatabase663.readRequired(path, this.goalTiles, groups)
+                : readCache(path, groups);
         int[][] neighbors = neighbors(size);
         for (int p = 0; p < groups.length; p++) {
             int[] tiles = groups[p];
@@ -116,9 +130,11 @@ final class DisjointPatternDatabase {
         for (int pos = 0; pos < board.length; pos++) {
             int tile = board[pos];
             if (tile == 0) {
-                k0 |= pos;
-                k1 |= pos;
-                k2 |= pos;
+                if (!"663".equals(partition)) {
+                    k0 |= pos;
+                    k1 |= pos;
+                    k2 |= pos;
+                }
             } else {
                 int part = groupOfTile[tile];
                 int bits = pos << shiftOfTile[tile];
@@ -144,6 +160,9 @@ final class DisjointPatternDatabase {
     }
 
     private byte[] createPattern(int[] groupTiles, int[][] neighbors) {
+        if (groupTiles.length > 5) {
+            throw new IllegalArgumentException("Legacy 24-bit generator supports at most five tiles");
+        }
         int length = 1 << (4 * (groupTiles.length + 1));
         byte[] dist = new byte[length];
         Arrays.fill(dist, (byte) UNKNOWN);
@@ -225,6 +244,7 @@ final class DisjointPatternDatabase {
     }
 
     private String cacheName() {
+        if ("663".equals(partition)) return PatternDatabase663.cacheName(goalTiles);
         StringBuilder builder = new StringBuilder("additive_v" + VERSION + "_n" + size + "_");
         for (int tile : goalTiles) builder.append(Character.forDigit(tile, 16));
         return builder.append(".bin").toString();
