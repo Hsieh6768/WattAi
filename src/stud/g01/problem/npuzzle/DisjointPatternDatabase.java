@@ -40,13 +40,12 @@ final class DisjointPatternDatabase {
     private final int[] shiftOfTile;
 
     static DisjointPatternDatabase forGoal(PuzzleBoard goal) {
-        String partition = System.getProperty("npuzzle.pdb.partition", "555");
-        if (!"555".equals(partition) && !"663".equals(partition)) {
-            throw new IllegalArgumentException("npuzzle.pdb.partition must be 555 or 663: " + partition);
+        String requestedPartition = System.getProperty("npuzzle.pdb.partition", "555");
+        if (!"555".equals(requestedPartition) && !"663".equals(requestedPartition)) {
+            throw new IllegalArgumentException("npuzzle.pdb.partition must be 555 or 663: " + requestedPartition);
         }
-        if ("663".equals(partition) && goal.getSize() != 4) {
-            throw new IllegalArgumentException("npuzzle.pdb.partition=663 requires a 4x4 board");
-        }
+        // Both supported options use legacy 4-4 on 3x3, including cache reuse.
+        String partition = goal.getSize() == 3 ? "555" : requestedPartition;
         ActiveCache current = activeCache;
         if (current != null && current.goal == goal && current.db.partition.equals(partition)) {
             return current.db;
